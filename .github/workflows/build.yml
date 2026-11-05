@@ -1,0 +1,46 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build app
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then export VERSION="${GITHUB_REF_NAME#v}"; fi
+          ./scripts/build-app.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Machoot
+          path: build/Machoot.zip
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: build/Machoot.zip
+      - name: Update Homebrew tap
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          if [ -z "$TAP_TOKEN" ]; then echo "HOMEBREW_TAP_TOKEN not set, skipping"; exit 0; fi
+          VERSION="${GITHUB_REF_NAME#v}"
+          SHA=$(shasum -a 256 build/Machoot.zip | cut -d' ' -f1)
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/metinyildirimnet/homebrew-tap.git" tap
+          mkdir -p tap/Casks
+          sed -e "s/^  version .*/  version \"$VERSION\"/" -e "s/^  sha256 .*/  sha256 \"$SHA\"/" \
+            homebrew/machoot.rb > tap/Casks/machoot.rb
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/machoot.rb
+          git commit -m "machoot $VERSION" && git push
