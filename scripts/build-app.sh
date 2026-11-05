@@ -9,16 +9,23 @@ cd "$(dirname "$0")/.."
 
 ARCHS="${ARCHS:-arm64 x86_64}"
 SIGN_IDENTITY="${SIGN_IDENTITY:--}"   # "-" = ad-hoc signature
-ARCH_FLAGS=()
-for a in $ARCHS; do ARCH_FLAGS+=(--arch "$a"); done
+MIN_MACOS="15.2"
 
-swift build -c release "${ARCH_FLAGS[@]}"
-BIN_DIR="$(swift build -c release "${ARCH_FLAGS[@]}" --show-bin-path)"
+# Build each architecture separately, then merge with lipo.
+# (Multi --arch builds go through xcbuild, which is flaky across Xcode versions.)
+SLICES=()
+for a in $ARCHS; do
+  triple="$a-apple-macosx$MIN_MACOS"
+  swift build -c release --triple "$triple" --scratch-path ".build/$a"
+  SLICES+=("$(swift build -c release --triple "$triple" --scratch-path ".build/$a" --show-bin-path)/Machoot")
+done
+mkdir -p build
+lipo -create "${SLICES[@]}" -output build/Machoot-bin
 
 APP="build/Machoot.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
-cp "$BIN_DIR/Machoot" "$APP/Contents/MacOS/Machoot"
+mv build/Machoot-bin "$APP/Contents/MacOS/Machoot"
 cp Resources/Info.plist "$APP/Contents/Info.plist"
 if [ -n "${VERSION:-}" ]; then   # e.g. VERSION=0.2.0 (set by CI from the git tag)
   /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString $VERSION" "$APP/Contents/Info.plist"
