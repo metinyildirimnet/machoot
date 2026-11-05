@@ -59,6 +59,19 @@ Update with `brew upgrade --cask machoot`, remove with `brew uninstall --cask ma
 
 On first instant pick, grant **Screen & System Audio Recording** permission (System Settings → Privacy & Security). This is required by macOS to read screen pixels. Machoot only ever captures the single pixel under your cursor and never stores or sends it anywhere.
 
+## Usage
+
+Machoot lives in the **menu bar** (the eyedropper icon, top right) — it has no Dock icon or main window.
+
+| Action | How |
+| --- | --- |
+| Copy the color under the cursor | `⌃⌥C` (Control + Option + C) |
+| Pick with the magnifier | `⌃⌥X`, then click |
+| Recent colors, copy format, settings | Click the menu bar icon |
+| Open Settings | Open Machoot again while it's running (Spotlight or Finder) |
+| Start automatically | Settings → **Launch at login** |
+| Reopen after quitting | `⌘ Space` → type **Machoot** → Enter, or open it from **Applications** |
+
 ## Build from source
 
 ```sh

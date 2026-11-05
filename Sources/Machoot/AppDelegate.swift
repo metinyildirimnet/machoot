@@ -21,6 +21,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
         prefs.onShortcutsChanged = { [weak self] in self?.registerHotKeys() }
         registerHotKeys()
+
+        if !UserDefaults.standard.bool(forKey: "hasShownWelcome") {
+            UserDefaults.standard.set(true, forKey: "hasShownWelcome")
+            showWelcome()
+        }
+    }
+
+    /// Opening the app again while it's running (Spotlight, Finder, Dock) shows Settings,
+    /// so people get visible feedback from a menu-bar-only app.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if welcomeWindow?.isVisible != true { openSettings() }
+        return true
+    }
+
+    private var welcomeWindow: NSWindow?
+
+    func showWelcome() {
+        let view = WelcomeView { [weak self] in self?.welcomeWindow?.close() }
+        let window = NSWindow(contentViewController: NSHostingController(rootView: view))
+        window.title = "Welcome to Machoot"
+        window.styleMask = [.titled, .closable]
+        window.isReleasedWhenClosed = false
+        window.center()
+        welcomeWindow = window
+        NSApp.activate()
+        window.makeKeyAndOrderFront(nil)
     }
 
     private func registerHotKeys() {
